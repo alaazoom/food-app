@@ -27,7 +27,7 @@ class EcommercefoodApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
 
-      home: AdminLogin(),
+      home: MainPage(),
 
     );
   }
