@@ -3,31 +3,40 @@ import 'dart:io';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
-class AddFoodItems extends StatefulWidget {
-  const AddFoodItems({super.key});
+class AddCarPage extends StatefulWidget {
+  const AddCarPage({super.key});
 
   @override
-  State<AddFoodItems> createState() => _AddFoodItemsState();
+  State<AddCarPage> createState() => _AddCarPageState();
 }
 
-class _AddFoodItemsState extends State<AddFoodItems> {
-  String category = "";
-  GlobalKey<FormState> itemsKey = GlobalKey();
-  bool CategorySelected = false;
-  bool CategorySelected2 = false;
+class _AddCarPageState extends State<AddCarPage> {
+  final GlobalKey<FormState> itemsKey = GlobalKey<FormState>();
+
+  // Controllers
+  TextEditingController model = TextEditingController();
+  TextEditingController price = TextEditingController();
+  TextEditingController engine = TextEditingController();
+  TextEditingController speed = TextEditingController();
+  TextEditingController seats = TextEditingController();
+
+  // Dropdown
+  String? selectedBrand;
+  List<String> brands = ["BMW", "Lamborghini", "Audi"];
+
+  // Image
+  XFile? image;
   bool imageSelected = false;
   bool imageSelected2 = false;
-  TextEditingController name = TextEditingController();
-  TextEditingController price = TextEditingController();
-  TextEditingController decription = TextEditingController();
-  bool isLoading = false;
-  XFile? image;
 
+  bool isLoading = false;
+
+  // Upload Image to ImgBB
   Future<String?> uploadToImgBB(File imageFile) async {
     try {
       final bytes = await imageFile.readAsBytes();
@@ -36,9 +45,7 @@ class _AddFoodItemsState extends State<AddFoodItems> {
       final response = await http.post(
         Uri.parse(
             'https://api.imgbb.com/1/upload?key=621dbc3ec83d71c2444fd401a88c408d'),
-        body: {
-          'image': base64Image,
-        },
+        body: {'image': base64Image},
       );
 
       if (response.statusCode == 200) {
@@ -54,19 +61,18 @@ class _AddFoodItemsState extends State<AddFoodItems> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Stack(
       children: [
         GestureDetector(
-          onTap: () {
-            FocusScope.of(context).unfocus();
-          },
+          onTap: () => FocusScope.of(context).unfocus(),
           child: Scaffold(
             appBar: AppBar(
               title: const Text(
-                "Add Items",
+                "Add Car",
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 28,
@@ -84,7 +90,7 @@ class _AddFoodItemsState extends State<AddFoodItems> {
                     children: [
                       // Upload Image
                       const Text(
-                        "Upload the Item Picture",
+                        "Upload the Car Picture",
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 24,
@@ -94,10 +100,10 @@ class _AddFoodItemsState extends State<AddFoodItems> {
                       Center(
                         child: GestureDetector(
                           onTap: () async {
-                            final image1 = await ImagePicker()
+                            final picked = await ImagePicker()
                                 .pickImage(source: ImageSource.gallery);
                             setState(() {
-                              image = image1;
+                              image = picked;
                               imageSelected = true;
                               imageSelected2 = false;
                             });
@@ -125,202 +131,139 @@ class _AddFoodItemsState extends State<AddFoodItems> {
                       const SizedBox(height: 8),
                       imageSelected2
                           ? const Text(
-                              "Add item picture",
+                              "Add car picture",
                               style: TextStyle(color: Colors.red),
                             )
                           : const SizedBox.shrink(),
 
-                      // Item Name
                       const SizedBox(height: 20),
-                      const Text(
-                        "Item Name",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                            fontFamily: "Poppins"),
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: name,
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return "Enter Item Name";
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          hintText: "Item Name",
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
 
-                      // Item Price
-                      const SizedBox(height: 20),
-                      const Text(
-                        "Item Price",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                            fontFamily: "Poppins"),
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        keyboardType: TextInputType.number,
-                        controller: price,
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return "Enter Item Price";
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          hintText: "Item Price",
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-
-                      // Item Details
-                      const SizedBox(height: 20),
-                      const Text(
-                        "Item Details",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                            fontFamily: "Poppins"),
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: decription,
-                        maxLines: 4,
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return "Enter Item details";
-                          }
-                          return null;
-                        },
-                        decoration: InputDecoration(
-                          hintText: "Item Details",
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-
-                      // Category
-                      const SizedBox(height: 20),
-                      const Text(
-                        "Select Category",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                            fontFamily: "Poppins"),
-                      ),
-                      const SizedBox(height: 10),
+                      // Engine, Speed, Seats
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _categoryButton("Ice Cream", "ice-cream"),
-                          _categoryButton("Pizza", "pizza"),
-                          _categoryButton("Salad", "salad"),
-                          _categoryButton("Burger", "burger"),
+                          _field(engine, "Engine"),
+                          _field(speed, "Speed"),
+                          _field(seats, "Seats"),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      CategorySelected2
-                          ? const Text(
-                              "Select Category",
-                              style: TextStyle(color: Colors.red),
-                            )
-                          : const SizedBox.shrink(),
+
+                      const SizedBox(height: 20),
+
+                      // Model
+                      const Text(
+                        "Car Model",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            fontFamily: "Poppins"),
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: model,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? "Enter Model" : null,
+                        decoration: _dec("Car Model"),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Price
+                      const Text(
+                        "Rent Price",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            fontFamily: "Poppins"),
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: price,
+                        keyboardType: TextInputType.number,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? "Enter Price" : null,
+                        decoration: _dec("Price per hour"),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      // Brand
+                      DropdownButtonFormField2(
+                        hint: const Text("Car Brand"),
+                        value: selectedBrand,
+                        items: brands
+                            .map((b) =>
+                                DropdownMenuItem(value: b, child: Text(b)))
+                            .toList(),
+                        validator: (v) =>
+                            v == null ? "Select brand" : null,
+                        onChanged: (v) =>
+                            setState(() => selectedBrand = v as String),
+                      ),
 
                       const SizedBox(height: 28),
+
+                      // Submit
                       GestureDetector(
                         onTap: () async {
-                          // Validation
                           if (!imageSelected) {
-                            setState(() {
-                              imageSelected2 = true;
-                            });
+                            setState(() => imageSelected2 = true);
                             return;
                           }
-                          if (!CategorySelected) {
-                            setState(() {
-                              CategorySelected2 = true;
-                            });
+                          if (!itemsKey.currentState!.validate()) return;
+
+                          setState(() => isLoading = true);
+
+                          final imageUrl =
+                              await uploadToImgBB(File(image!.path));
+
+                          if (imageUrl == null) {
+                            setState(() => isLoading = false);
+                            AwesomeDialog(
+                              context: context,
+                              dialogType: DialogType.error,
+                              title: "Upload Error",
+                              desc: "Failed to upload image",
+                              btnOkOnPress: () {},
+                            ).show();
                             return;
                           }
-                          if (itemsKey.currentState!.validate()) {
-                            setState(() {
-                              isLoading = true;
+
+                          // Save to Firestore in collection 'car'
+                          try {
+                            await FirebaseFirestore.instance
+                                .collection("car")
+                                .add({
+                              "brand": selectedBrand,
+                              "model": model.text,
+                              "engine": engine.text,
+                              "speed": speed.text,
+                              "seats": seats.text,
+                              "price_per_hour": price.text,
+                              "image": imageUrl,
+                              "createdAt": FieldValue.serverTimestamp(),
                             });
 
-                            final url = await uploadToImgBB(File(image!.path));
+                            setState(() => isLoading = false);
 
-                            if (url == null) {
-                              setState(() {
-                                isLoading = false;
-                              });
-                              AwesomeDialog(
-                                context: context,
-                                dialogType: DialogType.error,
-                                animType: AnimType.rightSlide,
-                                title: 'Upload Error',
-                                desc:
-                                    "Failed to upload image. Please check your internet connection.",
-                                btnOkOnPress: () {},
-                              ).show();
-                              return;
-                            }
-
-                            try {
-                              CollectionReference cat =
-                                  FirebaseFirestore.instance.collection(category);
-                              await cat.add({
-                                'name': name.text,
-                                'price': price.text,
-                                'details': decription.text,
-                                "cat": category,
-                                "image": url,
-                              });
-
-                              CollectionReference catAll = FirebaseFirestore
-                                  .instance
-                                  .collection("all-items");
-                              await catAll.add({
-                                'name': name.text,
-                                'price': price.text,
-                                'details': decription.text,
-                                "cat": category,
-                                "image": url,
-                              });
-
-                              setState(() {
-                                isLoading = false;
-                              });
-
-                              await AwesomeDialog(
-                                context: context,
-                                dialogType: DialogType.success,
-                                animType: AnimType.rightSlide,
-                                title: 'Added',
-                                desc:
-                                    "The item has been successfully added to the menu",
-                              ).show();
-
-                              Navigator.pop(context);
-                            } catch (e) {
-                              setState(() {
-                                isLoading = false;
-                              });
-                              await AwesomeDialog(
-                                context: context,
-                                dialogType: DialogType.error,
-                                animType: AnimType.rightSlide,
-                                title: 'Error',
-                                desc: e.toString(),
-                              ).show();
-                            }
+                            await AwesomeDialog(
+                              context: context,
+                              dialogType: DialogType.success,
+                              title: "Added",
+                              desc: "Car has been added successfully",
+                              btnOkOnPress: () {
+                                Navigator.pop(context);
+                              },
+                            ).show();
+                          } catch (e) {
+                            setState(() => isLoading = false);
+                            AwesomeDialog(
+                              context: context,
+                              dialogType: DialogType.error,
+                              title: "Error",
+                              desc: e.toString(),
+                              btnOkOnPress: () {},
+                            ).show();
                           }
                         },
                         child: Container(
@@ -330,14 +273,15 @@ class _AddFoodItemsState extends State<AddFoodItems> {
                               color: Colors.black,
                               borderRadius: BorderRadius.circular(12)),
                           child: const Center(
-                              child: Text(
-                            "Add Item",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: "Poppins"),
-                          )),
+                            child: Text(
+                              "Add Car",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: "Poppins"),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -351,7 +295,7 @@ class _AddFoodItemsState extends State<AddFoodItems> {
         if (isLoading)
           Container(
             height: screenHeight,
-            width: MediaQuery.of(context).size.width,
+            width: double.infinity,
             color: Colors.black26,
             child: const Center(child: CircularProgressIndicator()),
           ),
@@ -359,39 +303,20 @@ class _AddFoodItemsState extends State<AddFoodItems> {
     );
   }
 
-  Widget _categoryButton(String text, String catKey) {
-    bool isSelected = category == catKey;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          category = catKey;
-          CategorySelected = true;
-          CategorySelected2 = false;
-        });
-      },
-      child: Material(
-        elevation: 5,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          height: 79,
-          width: 90,
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.black : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Center(
-            child: Text(
-              text,
-              style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: "Poppins"),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
+  // Helper field
+  Widget _field(TextEditingController c, String hint) {
+    return SizedBox(
+      width: 120,
+      child: TextFormField(
+        controller: c,
+        validator: (v) => v == null || v.isEmpty ? "$hint required" : null,
+        decoration: _dec(hint),
       ),
     );
   }
+
+  InputDecoration _dec(String hint) => InputDecoration(
+        hintText: hint,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      );
 }
